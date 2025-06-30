@@ -14,12 +14,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  INVESTOR
+  FOUNDER
+  ADMIN
+}
+
 model User {
-  id            String    @id
+  id            String    @id @default(cuid())
   name          String
   email         String
   emailVerified Boolean
   image         String?
+  role          Role      @default(INVESTOR)
   createdAt     DateTime
   updatedAt     DateTime
   sessions      Session[]
@@ -29,23 +36,8 @@ model User {
   @@map("user")
 }
 
-model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime
-  updatedAt DateTime
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([token])
-  @@map("session")
-}
-
 model Account {
-  id                    String    @id
+  id                    String    @id @default(cuid())
   accountId             String
   providerId            String
   userId                String
@@ -61,6 +53,21 @@ model Account {
   updatedAt             DateTime
 
   @@map("account")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
 }
 
 model Verification {

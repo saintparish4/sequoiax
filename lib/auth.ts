@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { customSession } from "better-auth/plugins";
     // If your Prisma file is located elsewhere, you can change the path
 import prisma from "./prisma";
 
@@ -52,9 +53,29 @@ export const auth = betterAuth({
   // User configuration
   user: {
     additionalFields: {
-      // Add any additional user fields you need
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "INVESTOR",
+        input: false, // don't allow user to set role during signup
+      },
     },
   },
+  
+  // Plugins
+  plugins: [
+    customSession(async ({ user, session }) => {
+      // Include the role field in the session
+      const userWithRole = user as typeof user & { role?: string };
+      return {
+        user: {
+          ...user,
+          role: userWithRole.role || "INVESTOR", // Ensure role is always available
+        },
+        session,
+      };
+    }),
+  ],
 });
 
 console.log("[auth] better-auth config loaded!");

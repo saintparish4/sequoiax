@@ -1,0 +1,1 @@
+Optionally, create a nested layout.tsx under /dashboard if you need a distinct layout (e.g. extra sidebar items for founders vs investors).
