@@ -1,4 +1,12 @@
-export default function Dashboard() {
-  return <h1 className="text-2xl font-bold"> Your Dashboard</h1>;
-}
+// app/dashboard/page.tsx
+import PortfolioDonut from "@/components/portfolioDonut";
+import DiscoverGrid   from "@/components/discoverGrid";
 
+export default function DashboardPage() {
+  return (
+    <div className="space-y-8">
+      <PortfolioDonut />
+      <DiscoverGrid />
+    </div>
+  );
+}
