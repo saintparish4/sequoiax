@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --font-satoshi: "Satoshi", sans-serif;
+}
+
+
+body {
+  background-image: url(/sequoia.svg);
+  left: 0px;
+  top: 0px;
+  height: 100%;
+  width: 100%;
+  animation: slow-grow 60s linear 1;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-repeat: no-repeat;
+}
