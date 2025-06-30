@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../app/generated/prisma"
@@ -14,26 +8,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== ENUMS =====
 enum Role {
   INVESTOR
   FOUNDER
   ADMIN
 }
 
+enum ListingStatus {
+  DRAFT
+  PENDING
+  LIVE
+  CLOSED
+}
+
+// ===== USER MANAGEMENT =====
 model User {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String
-  email         String
-  emailVerified Boolean
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  role          Role      @default(INVESTOR)
-  createdAt     DateTime
-  updatedAt     DateTime
+  role          Role     @default(INVESTOR)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
   sessions      Session[]
   accounts      Account[]
+  startups      Startup[]
+  tokens        Token[]
+  games         Game[]
+  properties    Property[]
+  investments   Investment[]
+  notifications Notification[]
 
-  @@unique([email])
-  @@map("user")
+  @@index([email])
+  @@index([role])
+  @@index([createdAt])
+  @@map("users")
 }
 
 model Account {
@@ -41,7 +54,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -49,34 +61,186 @@ model Account {
   refreshTokenExpiresAt DateTime?
   scope                 String?
   password              String?
-  createdAt             DateTime
-  updatedAt             DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  @@map("account")
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([providerId])
+  @@index([accountId])
+  @@map("accounts")
 }
 
 model Session {
   id        String   @id @default(cuid())
+  token     String   @unique
   expiresAt DateTime
-  token     String
-  createdAt DateTime
-  updatedAt DateTime
   ipAddress String?
   userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
-  @@map("session")
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
 }
 
 model Verification {
-  id         String    @id
+  id         String   @id
   identifier String
   value      String
   expiresAt  DateTime
-  createdAt  DateTime?
-  updatedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@map("verification")
+  @@index([identifier])
+  @@index([expiresAt])
+  @@map("verifications")
+}
+
+// ===== INVESTMENT OPPORTUNITIES =====
+model Startup {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  description  String?
+  website      String?
+  targetAmount Decimal
+  logoUrl      String?
+  docUrl       String?
+  status       ListingStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  ownerId      String
+
+  // Relations
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  investments Investment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("startups")
+}
+
+model Token {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  ticker    String        @unique
+  supply    BigInt
+  price     Float
+  logoUrl   String?
+  docUrl    String?
+  status    ListingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  ownerId   String
+
+  // Relations
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  investments Investment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([ticker])
+  @@index([createdAt])
+  @@map("tokens")
+}
+
+model Game {
+  id        String        @id @default(cuid())
+  title     String        @unique
+  platform  String
+  price     Decimal
+  logoUrl   String?
+  docUrl    String?
+  status    ListingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  ownerId   String
+
+  // Relations
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  investments Investment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([platform])
+  @@index([createdAt])
+  @@map("games")
+}
+
+model Property {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  location  String
+  price     Decimal
+  logoUrl   String?
+  docUrl    String?
+  status    ListingStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  ownerId   String
+
+  // Relations
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  investments Investment[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([location])
+  @@index([createdAt])
+  @@map("properties")
+}
+
+// ===== INVESTMENTS =====
+model Investment {
+  id         String   @id @default(cuid())
+  amount     Decimal
+  createdAt  DateTime @default(now())
+  investorId String
+
+  // Polymorphic relations - only one will be non-null per investment
+  startupId  String?
+  tokenId    String?
+  gameId     String?
+  propertyId String?
+
+  // Relations
+  investor User      @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  startup  Startup?  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  token    Token?    @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  game     Game?     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([investorId])
+  @@index([startupId])
+  @@index([tokenId])
+  @@index([gameId])
+  @@index([propertyId])
+  @@index([createdAt])
+  @@map("investments")
+}
+
+// ===== NOTIFICATIONS =====
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
